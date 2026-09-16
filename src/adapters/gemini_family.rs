@@ -103,7 +103,8 @@ impl Adapter for GeminiAdapter {
                 }
             }
         }
-        out.extend(self.scan_tree(spec, &text_roots(ctx)));
+        out.extend(self.scan_tree(spec, &identity_roots(ctx)));
+        out.extend(self.scan_tree(spec, &chat_roots(ctx)));
         out
     }
 
@@ -112,7 +113,7 @@ impl Adapter for GeminiAdapter {
         ctx: &Ctx,
         spec: &ReplaceSpec,
         backup: &mut Backup,
-        _deep: bool,
+        deep: bool,
     ) -> Result<Vec<Finding>> {
         let mut actions = Vec::new();
         let old_slug = slugify(&encodings::basename(&spec.old));
@@ -186,29 +187,59 @@ impl Adapter for GeminiAdapter {
                 }
             }
         }
-        // chats + .project_root + settings: boundary text replace covers
-        // both the raw path and the sha256 projectHash token
-        for f in self.scan_tree(spec, &text_roots(ctx)) {
+        // .project_root markers + projects.json + settings: identity scope;
+        // chats carry identity fields (projectHash, cwd) rewritten by
+        // default, while path mentions inside message content need --deep
+        for f in self.scan_tree(spec, &identity_roots(ctx)) {
             if f.kind == "file" && rewriters::rewrite_text_file(Path::new(&f.target), spec, backup)?
             {
                 actions.push(mk(self.name(), "file", Path::new(&f.target), "text"));
+            }
+        }
+        for f in self.scan_tree(spec, &chat_roots(ctx)) {
+            if f.kind != "file" {
+                continue;
+            }
+            let path = Path::new(&f.target);
+            // the ownership marker is plain text and always rewritten
+            if path.file_name().is_some_and(|n| n == ".project_root") {
+                if rewriters::rewrite_text_file(path, spec, backup)? {
+                    actions.push(mk(self.name(), "file", path, "project_root"));
+                }
+                continue;
+            }
+            if deep {
+                // --deep: raw boundary replace covers content mentions too
+                if rewriters::rewrite_text_file(path, spec, backup)? {
+                    actions.push(mk(self.name(), "file", path, "text-deep"));
+                }
+                continue;
+            }
+            // default: the standard identity-field cascade per extension
+            if let Some(hit) =
+                super::rewrite_file_by_ext(self.name(), path, spec, backup, false, false)?
+            {
+                actions.push(hit);
             }
         }
         Ok(actions)
     }
 }
 
-fn text_roots(ctx: &Ctx) -> Vec<PathBuf> {
-    [
-        ".gemini/tmp",
-        ".gemini/history",
-        ".gemini/settings.json",
-        ".gemini/projects.json",
-    ]
-    .iter()
-    .map(|rel| ctx.h(rel))
-    .filter(|p| p.exists())
-    .collect()
+fn identity_roots(ctx: &Ctx) -> Vec<PathBuf> {
+    [".gemini/projects.json", ".gemini/settings.json"]
+        .iter()
+        .map(|rel| ctx.h(rel))
+        .filter(|p| p.exists())
+        .collect()
+}
+
+fn chat_roots(ctx: &Ctx) -> Vec<PathBuf> {
+    [".gemini/tmp", ".gemini/history"]
+        .iter()
+        .map(|rel| ctx.h(rel))
+        .filter(|p| p.exists())
+        .collect()
 }
 
 // ------------------------------------------------------------- qwen/iflow

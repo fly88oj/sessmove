@@ -11,10 +11,11 @@ use std::path::Path;
 
 /// identity-ish JSON keys that hold a project path / URI; rewriting these
 /// is always safe (never chat content)
-pub const JSON_FIELD_KEYS: &[&str] = &[
+const JSON_FIELD_KEYS: &[&str] = &[
     "cwd",
     "directory",
     "project",
+    "projectHash",
     "projectRoot",
     "projectroot",
     "root",
