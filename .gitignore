@@ -1,0 +1,16 @@
+# rust
+/target/
+**/*.rs.bk
+
+# tool artifacts
+tests/e2e_results.json
+.sessmove/
+.agentpath/
+.mimosa/
+*.agentpath-tmp
+*.agentpath-premigration.bak
+
+# editors / os
+.idea/
+.vscode/
+.DS_Store
