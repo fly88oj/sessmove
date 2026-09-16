@@ -14,7 +14,7 @@ case "$HDR" in
 esac
 
 TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
-SCOPES='engine|adapters|cli|i18n|tests|packaging|docs|deps'
+SCOPES='engine|adapters|cli|i18n|tests|packaging|docs|deps|release'
 PATTERN="^(${TYPES})(\((${SCOPES})\))?!?: .{1,72}(\$.*)?$"
 
 # subject line: type(scope)?: summary (<=72 chars after the colon)

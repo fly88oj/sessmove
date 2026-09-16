@@ -66,7 +66,7 @@ and CI re-checks every commit in a PR:
 - **types**: `feat` `fix` `docs` `style` `refactor` `perf` `test` `build`
   `ci` `chore` `revert`
 - **scopes** (optional): `engine` `adapters` `cli` `i18n` `tests`
-  `packaging` `docs` `deps`
+  `packaging` `docs` `deps` `release`
 
 Examples:
 
