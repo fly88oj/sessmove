@@ -1,0 +1,123 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Release: on a pushed v* tag, build for every supported platform, package
+# (tar.gz / zip + .deb + .rpm + .dmg) and publish a GitHub Release.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            packaging: deb-rpm
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            packaging: dmg
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            packaging: dmg
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            packaging: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: package (tar.gz / zip)
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          STAGE=target/${{ matrix.target }}/package
+          mkdir -p "${STAGE}"
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            7z a "${STAGE}/sessmove-${VERSION}-${{ matrix.target }}.zip" \
+               ./target/${{ matrix.target }}/release/sessmove.exe \
+               ./target/${{ matrix.target }}/release/agentpath.exe \
+               README.md LICENSE
+          else
+            # stage everything first, then a single -C so tar finds the docs
+            # (chained -C would resolve the second one inside the release dir)
+            cp README.md LICENSE target/${{ matrix.target }}/release/
+            tar -czf "${STAGE}/sessmove-${VERSION}-${{ matrix.target }}.tar.gz" \
+                -C target/${{ matrix.target }}/release \
+                sessmove agentpath README.md LICENSE
+          fi
+
+      - name: package (.deb)
+        if: matrix.packaging == 'deb-rpm'
+        run: |
+          cargo install cargo-deb --locked
+          cargo deb --output target/${{ matrix.target }}/package/sessmove_${GITHUB_REF_NAME#v}-1_amd64.deb
+
+      - name: package (.rpm)
+        if: matrix.packaging == 'deb-rpm'
+        run: |
+          cargo install cargo-generate-rpm --locked
+          cargo generate-rpm --output target/${{ matrix.target }}/package/sessmove-${GITHUB_REF_NAME#v}-1.x86_64.rpm
+
+      - name: package (.dmg)
+        if: matrix.packaging == 'dmg'
+        shell: bash
+        run: |
+          # cargo-deb/generate-rpm metadata is linux-only; dmg via hdiutil
+          VERSION=${GITHUB_REF_NAME#v}
+          STAGE=target/${{ matrix.target }}/release/dmg-stage
+          mkdir -p "${STAGE}/bin" "${STAGE}/share/doc/sessmove"
+          cp target/${{ matrix.target }}/release/sessmove "${STAGE}/bin/"
+          cp target/${{ matrix.target }}/release/agentpath "${STAGE}/bin/"
+          cp README.md LICENSE "${STAGE}/share/doc/sessmove/"
+          printf 'sessmove %s (%s)\n\nInstall: cp bin/sessmove bin/agentpath /usr/local/bin/\n' \
+            "${VERSION}" "${{ matrix.target }}" > "${STAGE}/INSTALL.txt"
+          hdiutil create -volname "sessmove-${VERSION}" \
+            -srcfolder "${STAGE}" -ov -format UDZO \
+            "target/${{ matrix.target }}/package/sessmove-${VERSION}-${{ matrix.target }}.dmg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/package/*
+
+  release:
+    name: publish github release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: list artifacts
+        run: find artifacts -type f | sort
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
+            artifacts/*.deb
+            artifacts/*.rpm
+            artifacts/*.dmg

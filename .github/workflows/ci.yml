@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# CI: lint + test on the three supported platforms, plus the same
+# pre-commit hooks contributors run locally and a commit-message gate.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: rustfmt
+        run: cargo fmt --all -- --check
+      - name: clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: test
+        run: cargo test --all
+      - name: smoke (agents list)
+        run: cargo run -q --bin agentpath -- agents
+      - name: smoke (sessmove help)
+        run: cargo run -q --bin sessmove -- --help
+
+  pre-commit:
+    name: pre-commit (same hooks as local)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install pre-commit
+        run: pipx install pre-commit
+      - name: run pre-commit on all files
+        run: pre-commit run --show-diff-on-failure --color=always --all-files
+
+  commit-messages:
+    name: conventional commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: check commit range
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..HEAD"
+          else
+            # push: everything that arrived in this push
+            RANGE="${{ github.event.before }}..HEAD"
+            # fall back to the last commit for a brand-new branch
+            if ! git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
+              RANGE="HEAD~1..HEAD"
+            fi
+          fi
+          echo "checking $RANGE"
+          for c in $(git rev-list --no-merges "$RANGE"); do
+            git log -1 --format=%s "$c" > /tmp/msg
+            ./scripts/check-commit-msg.sh /tmp/msg || {
+              echo "commit $c does not follow Conventional Commits" >&2
+              exit 1
+            }
+          done
