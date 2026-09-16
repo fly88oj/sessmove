@@ -85,11 +85,18 @@ jobs:
           fetch-depth: 0
       - name: check commit range
         run: |
+          # force pushes rewrite history; `event.before` may not exist or may
+          # not be an ancestor — fall back to the single head commit, which
+          # is always already gated by the local commit-msg hook
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             RANGE="${{ github.event.pull_request.base.sha }}..HEAD"
           else
-            RANGE="${{ github.event.before }}..HEAD"
-            if ! git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
+            BEFORE="${{ github.event.before }}"
+            if [ -n "$BEFORE" ] \
+               && git cat-file -e "$BEFORE" 2>/dev/null \
+               && git merge-base --is-ancestor "$BEFORE" HEAD; then
+              RANGE="$BEFORE..HEAD"
+            else
               RANGE="HEAD~1..HEAD"
             fi
           fi
