@@ -20,7 +20,13 @@ pub struct Fixture {
 
 impl Fixture {
     pub fn new(tag: &str) -> Self {
-        let tmp = std::env::temp_dir().join(format!("agentpath-rs-{}-{}", tag, std::process::id()));
+        let raw = std::env::temp_dir().join(format!("agentpath-rs-{}-{}", tag, std::process::id()));
+        let _ = fs::remove_dir_all(&raw);
+        // create first, then canonicalize — canonicalize on a non-existent
+        // path fails; macOS /tmp -> /private/tmp must be resolved before
+        // tests compare against realpath-derived bucket names
+        fs::create_dir_all(&raw).unwrap();
+        let tmp = std::fs::canonicalize(&raw).unwrap_or(raw);
         let home = tmp.join("home");
         let old_dir = tmp.join("proj").join("abc");
         fs::create_dir_all(&old_dir).unwrap();
@@ -146,7 +152,14 @@ impl Fixture {
     }
 
     fn build_gemini_fork(&self, rel: &str) {
-        let enc_old = sessmove::encodings::dash_encode(&self.old);
+        // use the vendor's own encoding: dash for qwen, iflow_bucket for
+        // iflow (which keeps underscores and collapses dashes — differs
+        // from dash_encode when the temp path contains `_`, as on macOS)
+        let enc_old = if rel == ".iflow" {
+            sessmove::encodings::iflow_bucket(&self.old)
+        } else {
+            sessmove::encodings::dash_encode(&self.old)
+        };
         self.w(
             &format!("{}/projects/{}/sess.jsonl", rel, enc_old),
             &format!("{{\"cwd\":\"{}\"}}\n", self.old),

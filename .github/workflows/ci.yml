@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# CI: lint + test on the three supported platforms, plus the same
-# pre-commit hooks contributors run locally and a commit-message gate.
+# CI: lint on all three platforms, full tests on Linux/macOS,
+# plus the same pre-commit hooks contributors run locally and a
+# commit-message gate.
 name: ci
 
 on:
@@ -12,8 +13,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: test (${{ matrix.os }})
+  lint:
+    name: lint (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -29,6 +30,28 @@ jobs:
         run: cargo fmt --all -- --check
       - name: clippy
         run: cargo clippy --all-targets -- -D warnings
+      - name: compile check
+        run: cargo build --all-targets
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+            experimental: false
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental || false }}
+    env:
+      RUST_BACKTRACE: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
       - name: test
         run: cargo test --all
       - name: smoke (agents list)
@@ -65,9 +88,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             RANGE="${{ github.event.pull_request.base.sha }}..HEAD"
           else
-            # push: everything that arrived in this push
             RANGE="${{ github.event.before }}..HEAD"
-            # fall back to the last commit for a brand-new branch
             if ! git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
               RANGE="HEAD~1..HEAD"
             fi

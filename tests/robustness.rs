@@ -10,10 +10,11 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn tmpdir(tag: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("ap-rob-{}-{}", tag, std::process::id()));
-    let _ = fs::remove_dir_all(&d);
-    fs::create_dir_all(&d).unwrap();
-    d
+    let raw = std::env::temp_dir().join(format!("ap-rob-{}-{}", tag, std::process::id()));
+    let _ = fs::remove_dir_all(&raw);
+    fs::create_dir_all(&raw).unwrap();
+    // canonicalize for macOS /tmp -> /private/tmp
+    std::fs::canonicalize(&raw).unwrap_or(raw)
 }
 
 #[test]

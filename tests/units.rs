@@ -141,9 +141,17 @@ fn qwen_iflow_bucket_and_hash_dir() {
     fx.migrate(false);
     for rel in [".qwen", ".iflow"] {
         let projects = fx.ctx.h(&format!("{}/projects", rel));
-        assert!(projects.join(encodings::dash_encode(&fx.new)).is_dir());
+        // each fork uses its own encoding: dash for qwen, iflow_bucket
+        // for iflow (which preserves underscores and collapses dashes)
+        let expected = if rel == ".iflow" {
+            encodings::iflow_bucket(&fx.new)
+        } else {
+            encodings::dash_encode(&fx.new)
+        };
+        assert!(projects.join(&expected).is_dir());
         let tmp = fx.ctx.h(&format!("{}/tmp", rel));
-        assert!(tmp.join(encodings::sha256_hex(&fx.new)).is_dir());
+        let h_new = encodings::sha256_hex(&fx.new);
+        assert!(tmp.join(&h_new).is_dir());
         assert!(!tmp.join(encodings::sha256_hex(&fx.old)).exists());
     }
 }

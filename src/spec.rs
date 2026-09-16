@@ -39,7 +39,7 @@ impl ReplaceSpec {
 
         let mut pairs: Vec<(String, String)> = vec![(old.clone(), new.clone())];
         pairs.extend(encodings::derived_tokens(&old, &new));
-        pairs.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        pairs.sort_by_key(|(a, _)| std::cmp::Reverse(a.len()));
 
         let needles: Vec<Vec<u8>> = pairs.iter().map(|(a, _)| a.as_bytes().to_vec()).collect();
 
