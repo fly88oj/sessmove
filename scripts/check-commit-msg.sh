@@ -15,7 +15,6 @@ esac
 
 TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
 SCOPES='engine|adapters|cli|i18n|tests|packaging|docs|deps|release|ci'
-PATTERN="^(${TYPES})(\((${SCOPES})\))?!?: .{1,72}(\$.*)?$"
 
 # subject line: type(scope)?: summary (<=72 chars after the colon)
 if ! printf '%s' "$HDR" | grep -qE "^(${TYPES})(\((${SCOPES})\))?!?: .+"; then

@@ -19,7 +19,7 @@ use std::path::{Path, PathBuf};
     about = "Migrate AI-agent session/config references when a project directory moves or is renamed"
 )]
 pub struct Cli {
-    /// override the display language (en, zh-CN, ja, es)
+    /// override the display language (en, zh-CN, ja, ko, es, fr, de, pt-BR)
     #[arg(long, global = true)]
     pub lang: Option<String>,
 

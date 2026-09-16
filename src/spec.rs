@@ -12,7 +12,7 @@ pub struct ReplaceSpec {
     pub old: String,
     pub new: String,
     /// old->new pairs sorted longest-first (path first, then derived tokens)
-    pub pairs: Vec<(String, String)>,
+    pairs: Vec<(String, String)>,
     needles: Vec<Vec<u8>>,
 }
 

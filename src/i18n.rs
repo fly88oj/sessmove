@@ -4,8 +4,6 @@
 //!
 //! Supported locales: en (default), zh-CN, ja, ko, es, fr, de, pt-BR.
 
-pub const SUPPORTED: &[&str] = &["en", "zh-CN", "ja", "ko", "es", "fr", "de", "pt-BR"];
-
 /// map a raw BCP-47-ish locale to the closest supported one
 pub fn normalize(raw: &str) -> String {
     let lower = raw.to_lowercase();
@@ -25,12 +23,8 @@ pub fn normalize(raw: &str) -> String {
         "fr" => "fr".to_string(),
         "de" => "de".to_string(),
         "pt" => {
-            if lower.contains("pt") && !lower.contains("pt-pt") || lower.contains("br") {
-                "pt-BR".to_string()
-            } else {
-                // european portuguese also maps to the pt-BR catalog
-                "pt-BR".to_string()
-            }
+            // both brazilian and european portuguese map to the pt-BR catalog
+            "pt-BR".to_string()
         }
         _ => "en".to_string(),
     }

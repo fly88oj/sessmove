@@ -293,8 +293,10 @@ impl Adapter for DroidAdapter {
                 &format!("-> {}", n.display()),
             ));
         }
-        // include logs: droid embeds the project cwd in its log lines
-        actions.extend(self.migrate_text_tree_unskipped(
+        // aggressive pass: session files embed the cwd in log-style lines,
+        // so every extension is rewritten as raw text (not just identity
+        // fields / config extensions)
+        actions.extend(self.migrate_text_tree_aggressive(
             spec,
             backup,
             &[ctx.h(".factory")],
@@ -527,18 +529,23 @@ impl Adapter for GenericAdapter {
         backup: &mut Backup,
         _deep: bool,
     ) -> Result<Vec<Finding>> {
-        let mut actions =
-            self.migrate_text_tree_unskipped(spec, backup, std::slice::from_ref(&self.root), true)?;
+        let mut actions = self.migrate_text_tree_aggressive(
+            spec,
+            backup,
+            std::slice::from_ref(&self.root),
+            true,
+        )?;
         actions.extend(self.migrate_pb_tree(spec, backup, std::slice::from_ref(&self.root))?);
         Ok(actions)
     }
 }
 
-// helper extension used by droid/generic: walk with an empty skip list and
-// rewrite aggressively (agent-owned state roots where any file may carry
-// the path; protobuf files included inline)
+// aggressive variant of `migrate_text_tree` for agent-owned state roots
+// where any file may carry the path: every extension is rewritten as raw
+// text (`aggressive = true`) and .pb files are rewritten inline; the
+// standard SKIP_DIRS (caches, node_modules, telemetry, …) still apply
 pub trait TextTreeExt: Adapter {
-    fn migrate_text_tree_unskipped(
+    fn migrate_text_tree_aggressive(
         &self,
         spec: &ReplaceSpec,
         backup: &mut Backup,
