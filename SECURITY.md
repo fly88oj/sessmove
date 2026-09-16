@@ -27,7 +27,8 @@ directories, SQLite databases, protobuf blobs). The mitigations are:
 - refusals for unsafe inputs (`--from /`, existing rename targets,
   non-directory sources for `sessmove`),
 - SQLite writes go through `wal_checkpoint` and bound parameters only,
-- no network access, no telemetry, no credential handling (auth files are
-  never touched; tests symlink them read-only).
+- no network access, no telemetry, no credential handling: auth files
+  are structurally avoided (adapters only touch session/config paths,
+  never `auth*`/`credential*`/`token*` files).
 
 If you find a way around any of these, please report it privately.

@@ -73,7 +73,7 @@ Examples:
 ```
 feat(adapters): add gemini cli adapter with sha256 projectHash rewrite
 fix(engine): preserve CRLF line endings in jsonl rewrites
-docs(readme): calibrate verification wording in all languages
+docs: calibrate README verification wording in all languages
 ```
 
 ## Adding a new agent adapter
