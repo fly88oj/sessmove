@@ -121,7 +121,9 @@ docs: calibrate README verification wording in all languages
 - New user-facing strings go into **all eight** `locales/*.yml` files
   (key parity is checked in review; the rust-i18n fallback is en).
 - Update `CHANGELOG.md` (Keep a Changelog format) and, for new adapters,
-  the tables in every README language.
+  the tables in every README language. Keep each list item on a single
+  source line — the release workflow copies the section verbatim into the
+  GitHub Release body, where every newline renders as a forced break.
 - Never commit local machine info (real home paths, hostnames,
   credentials); `scripts/check-no-local-info.sh` blocks it and redact
   examples to `/home/user/...`.
