@@ -8,6 +8,12 @@ List items must each be a single source line (no hard wrapping): the
 release workflow extracts this file verbatim as the GitHub Release body,
 and the release page renders every newline as a forced break.
 
+## [Unreleased]
+
+### Added
+
+- README translations for the remaining four UI languages (한국어, Français, Deutsch, Português) so documentation covers all eight locales; the 日本語 and Español READMEs now carry the full supported-agents table like every other language.
+
 ## [1.0.0] - 2026-09-04
 
 First public release.

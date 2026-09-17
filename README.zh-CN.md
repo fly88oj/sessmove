@@ -1,6 +1,6 @@
 # sessmove
 
-[English](README.md) | **[简体中文](README.zh-CN.md)** | [日本語](README.ja.md) | [Español](README.es.md)
+[English](README.md) | **[简体中文](README.zh-CN.md)** | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Português](README.pt-BR.md)
 
 移动项目目录的**同时**，把所有 AI 编程 Agent 的本地历史一起迁移。
 
